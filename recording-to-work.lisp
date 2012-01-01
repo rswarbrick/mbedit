@@ -70,15 +70,30 @@ in from DATE (which can be NIL)."
           (format t "Ok, we're done!~%")
           (return nil))))))
 
-(defun relate-recordings-to-work ()
+(defun relate-recordings-to-work (&optional force)
   (unless (typep *r-to-w-work* 'work)
     (error "*R-TO-W-WORK* must be a work."))
   (format t "Relating to the work: ~A~%~%" *r-to-w-work*)
   (dolist (rec *r-to-w-queue*)
-    (unless (decide-about-recording rec *r-to-w-work*)
-      (return))
+    (cond
+      (force
+       (format t "Relating ~A..." rec)
+       (finish-output)
+       (relate-recording-to-work rec *r-to-w-work* :auto-edit t)
+       (format t " done.~%"))
+      (t
+       (unless (decide-about-recording rec *r-to-w-work*)
+         (return))))
     ;; Throw away the head of the queue, since we don't want to be asked about
     ;; it again.
     (pop *r-to-w-queue*))
   (format t "~A recordings left in the list." (length *r-to-w-queue*))
   (values))
+
+(defun works-for-artist (artist-name search-string)
+  (pl-as-list (search-request (format nil "artist:\"~A\" AND ~A"
+                                      artist-name search-string)
+                              :type "recording")))
+
+(defun works-with-no-recordings (artist-name search-string)
+  (remove-if-not #'no-works-p (works-for-artist artist-name search-string)))
