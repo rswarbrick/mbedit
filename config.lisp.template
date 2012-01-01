@@ -1,0 +1,4 @@
+(in-package :mbedit)
+
+(defvar *mb-username* "??")
+(defvar *mb-password* "??")
