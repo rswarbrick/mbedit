@@ -1,1 +1,1 @@
-(defpackage mbedit (:use :cl :mbcl))
+(defpackage mbedit (:use :cl :mbcl :anaphora))
