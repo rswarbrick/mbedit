@@ -90,10 +90,10 @@ in from DATE (which can be NIL)."
   (format t "~A recordings left in the list." (length *r-to-w-queue*))
   (values))
 
-(defun works-for-artist (artist-name search-string)
+(defun recordings-for-artist (artist-name search-string)
   (pl-as-list (search-request (format nil "artist:\"~A\" AND ~A"
                                       artist-name search-string)
                               :type "recording")))
 
-(defun works-with-no-recordings (artist-name search-string)
+(defun recordings-with-no-work (artist-name search-string)
   (remove-if-not #'no-works-p (works-for-artist artist-name search-string)))
