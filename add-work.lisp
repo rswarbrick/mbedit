@@ -58,21 +58,31 @@
      :cookie-jar *cookie-jar*))
   (values))
 
-
+(defun create-dated-work (composer name begin-date end-date)
+  (format t "~A~%  Creating work... " name)
+  (finish-output)
+  (let ((work (create-work-with-name name)))
+    (format t "done.~%  Relating to composer... ")
+    (finish-output)
+    (relate-to-composer work composer
+                        :begin-date begin-date
+                        :end-date end-date)
+    (format t "done.~%")
+    work))
 
 (defun add-works-below-parent (parent composer names &key begin-date end-date)
   (mapcar (lambda (name)
-            (format t "~A~%  Creating work... " name)
-            (finish-output)
-            (let ((work (create-work-with-name name)))
-              (format t "done.~%  Relating to parent... ")
+            (let ((work (create-dated-work composer name begin-date end-date)))
+              (format t "  Relating to parent... ")
               (finish-output)
               (relate-to-parent work parent)
-              (format t "done.~%  Relating to composer... ")
-              (finish-output)
-              (relate-to-composer work composer
-                                  :begin-date begin-date
-                                  :end-date end-date)
               (format t "done.~%~%")
               work))
           names))
+
+(defun add-work-list (composer parent-name other-names &key begin-date end-date)
+  "Returns the parent work."
+  (let ((parent (create-dated-work composer parent-name begin-date end-date)))
+    (add-works-below-parent parent composer other-names
+                            :begin-date begin-date :end-date end-date)
+    parent))
