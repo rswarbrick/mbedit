@@ -52,7 +52,8 @@ in from DATE (which can be NIL)."
   "Set this before calling RELATE-RECORDINGS-TO-WORK")
 
 (defun decide-about-recording (rec work)
-  (format t "Recording: ~A~%~A~%~%" rec (page rec))
+  (format t "Recording: ~A~%Title:     ~A~%~A~%~%"
+          rec (title rec) (page rec))
   (loop
      (format t "Relate?~% (1) Yes~% (2) No~% ~
                           (3) Inspect~% (*) No and quit~%   -> ")
@@ -77,7 +78,8 @@ in from DATE (which can be NIL)."
 (defun relate-recordings-to-work (&optional force)
   (unless (typep *r-to-w-work* 'work)
     (error "*R-TO-W-WORK* must be a work."))
-  (format t "Relating to the work: ~A~%~%" *r-to-w-work*)
+  (format t "Relating to work: ~A~%Title:            ~A~%~%"
+          *r-to-w-work* (title *r-to-w-work*))
   (dolist (rec *r-to-w-queue*)
     (cond
       (force
