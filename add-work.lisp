@@ -6,16 +6,6 @@
 (defun get-create-url (type)
   (format nil "~A~A/create" *mb-root-url* type))
 
-(defun parse-mb-object-url (url)
-  (destructuring-bind (type id) (last (split-sequence #\/ url) 2)
-    (values type id)))
-
-(defun url-to-object (url)
-  (multiple-value-bind (type id) (parse-mb-object-url url)
-    (let ((sym (find-symbol (string-upcase type) :mbedit)))
-      (unless sym (error "Unrecognised table name: ~A" type))
-      (make-instance sym :id id))))
-
 (defun create-work-with-name (name &key comment iswc type-id)
   "Returns a work object representing the one we made."
   (url-to-object
