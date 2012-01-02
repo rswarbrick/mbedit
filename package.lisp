@@ -1,1 +1,1 @@
-(defpackage mbedit (:use :cl :mbcl :anaphora))
+(defpackage mbedit (:use :cl :mbcl :anaphora :split-sequence))

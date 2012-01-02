@@ -22,13 +22,17 @@ in from DATE (which can be NIL)."
           '("year" "month" "day")
           '(year month day)))
 
-(defun recording-to-work-parameters
-    (begin-date end-date edit-note auto-edit)
-  `(("ar.link_type_id" . ,(princ-to-string *performance-link-type-id*))
+(defun create-relation-parameters (type-id &key begin-date end-date edit-note auto-edit)
+  `(("ar.link_type_id" . ,(princ-to-string type-id))
     ,@(date-parameters "ar.begin_date" begin-date)
     ,@(date-parameters "ar.end_date" end-date)
     ("ar.edit_note" . ,(or edit-note ""))
     ("ar.as_auto_editor" . ,(if auto-edit "1" "0"))))
+
+(defun recording-to-work-parameters (begin-date end-date edit-note auto-edit)
+  (create-relation-parameters
+   *performance-link-type-id* :begin-date begin-date :end-date end-date
+   :edit-note edit-note :auto-edit auto-edit))
 
 (defun relate-recording-to-work
     (recording work &key begin-date end-date edit-note auto-edit)

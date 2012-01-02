@@ -28,12 +28,13 @@ is wrapped up in a multiple-value-bind and we check that the exit status is
 302. If not, we throw an error (since presumably something went horribly
 wrong). If we get data out, the HTML seems to contain the error message in a
 reasonably standard format, so try to report that too."
-  `(multiple-value-bind (contents status) (progn ,@body)
-     (unless (= status 302)
-       (error 'not-302-error
-              :msg (extract-login-error contents)
-              :status status :contents contents))
-    (values)))
+  `(let ((drakma:*drakma-default-external-format* :utf-8))
+     (multiple-value-bind (contents status headers) (progn ,@body)
+       (unless (= status 302)
+         (error 'not-302-error
+                :msg (extract-login-error contents)
+                :status status :contents contents))
+       (cdr (assoc :location headers)))))
 
 (defun login ()
   (handler-case
