@@ -11,7 +11,7 @@
   (mapcan
    (lambda (release)
      (remove-if-not
-      (lambda (trk) (string= (id (recording trk)) (id *rec*)))
+      (lambda (trk) (string= (id (recording trk)) (id recording)))
       (tracks release)))
    (pl-as-list (release-list recording))))
 
