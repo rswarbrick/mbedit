@@ -9,4 +9,6 @@
      (:file "config" :depends-on ("package"))
      (:file "login" :depends-on ("package" "config"))
      (:file "recording-to-work" :depends-on ("package" "login"))
-     (:file "add-work" :depends-on ("package" "login" "recordings-to-tracks"))))
+     (:file "tracks-to-recordings"
+            :depends-on ("package" "login" "recording-to-work"))
+     (:file "add-work" :depends-on ("package" "login" "recording-to-work"))))
