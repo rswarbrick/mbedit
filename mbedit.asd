@@ -10,6 +10,7 @@
      (:file "login" :depends-on ("package" "config"))
      (:file "recording-to-work" :depends-on ("package" "login"))
      (:file "json" :depends-on ("package"))
+     (:file "browser" :depends-on ("package"))
      (:file "tracks-to-recordings"
             :depends-on ("package" "login" "recording-to-work" "json"))
      (:file "add-work" :depends-on ("package" "login" "recording-to-work"))))
