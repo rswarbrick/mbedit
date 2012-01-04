@@ -80,9 +80,21 @@
               work))
           names))
 
-(defun add-work-list (composer parent-name other-names &key begin-date end-date)
+(defun add-work-list (composer parent-name other-names
+                      &optional begin-date end-date)
   "Returns the parent work."
   (let ((parent (create-dated-work composer parent-name begin-date end-date)))
     (add-works-below-parent parent composer other-names
                             :begin-date begin-date :end-date end-date)
     parent))
+
+(defun make-standard-work-list (composer parent-name movement-names
+                                &optional begin-date end-date)
+  "Returns the parent work. Like ADD-WORK-LIST, but automatically prepends the
+parent name to each movement name, along with a roman numeral."
+  (add-work-list
+   composer parent-name
+   (mapcar (lambda (n mvmnt) (format nil "~A: ~@:R. ~A" parent-name n mvmnt))
+           (alexandria:iota (length movement-names) :start 1)
+           movement-names)
+   begin-date end-date))
