@@ -82,7 +82,11 @@
 
 (defun add-work-list (composer parent-name other-names
                       &optional begin-date end-date)
-  "Returns the parent work."
+  "Add a given work list. If BEGIN-DATE is specified and not END-DATE, makes
+them equal. Returns the parent work."
+  (unless end-date
+    (setf end-date begin-date))
+
   (let ((parent (create-dated-work composer parent-name begin-date end-date)))
     (add-works-below-parent parent composer other-names
                             :begin-date begin-date :end-date end-date)
