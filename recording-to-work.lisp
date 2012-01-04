@@ -46,11 +46,6 @@ in from DATE (which can be NIL)."
   (forget-cached recording)
   (forget-cached work))
 
-(defvar *r-to-w-queue* nil
-  "Fill this up before calling RELATE-RECORDINGS-TO-WORK")
-(defvar *r-to-w-work* nil
-  "Set this before calling RELATE-RECORDINGS-TO-WORK")
-
 (defun decide-about-recording (rec work)
   (format t "Recording: ~A~%Title:     ~A~%~A~%~%"
           rec (title rec) (page rec))
@@ -75,26 +70,27 @@ in from DATE (which can be NIL)."
           (format t "Ok, we're done!~%")
           (return nil))))))
 
-(defun relate-recordings-to-work (&optional force)
-  (unless (typep *r-to-w-work* 'work)
-    (error "*R-TO-W-WORK* must be a work."))
+(defun relate-recordings-to-work (recordings work &optional force)
+  "Returns new set of recordings (the ones that still need looking at)."
+  (unless (typep work 'work)
+    (error "WORK must be a work."))
   (format t "Relating to work: ~A~%Title:            ~A~%~%"
-          *r-to-w-work* (title *r-to-w-work*))
-  (dolist (rec *r-to-w-queue*)
+          work (title work))
+  (dolist (rec recordings)
     (cond
       (force
        (format t "Relating ~A..." rec)
        (finish-output)
-       (relate-recording-to-work rec *r-to-w-work* :auto-edit t)
+       (relate-recording-to-work rec work :auto-edit t)
        (format t " done.~%"))
       (t
-       (unless (decide-about-recording rec *r-to-w-work*)
+       (unless (decide-about-recording rec work)
          (return))))
     ;; Throw away the head of the queue, since we don't want to be asked about
     ;; it again.
-    (pop *r-to-w-queue*))
-  (format t "~A recordings left in the list." (length *r-to-w-queue*))
-  (values))
+    (pop recordings))
+  (format t "~A recordings left in the list." (length recordings))
+  recordings)
 
 (defun recordings-for-artist (artist-name search-string)
   (pl-as-list (search-request (format nil "artist:\"~A\" AND ~A"
