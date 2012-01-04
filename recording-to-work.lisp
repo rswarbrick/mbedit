@@ -102,4 +102,4 @@ in from DATE (which can be NIL)."
                               :type "recording")))
 
 (defun recordings-with-no-work (artist-name search-string)
-  (remove-if-not #'no-works-p (works-for-artist artist-name search-string)))
+  (remove-if-not #'no-works-p (recordings-for-artist artist-name search-string)))
