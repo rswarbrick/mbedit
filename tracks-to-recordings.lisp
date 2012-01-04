@@ -65,10 +65,11 @@ result."))
 
           (cons "edit-recording.artist_credit.names.0.artist.name"
                 (name (artist nc)))
-          (cons "edit-recording.artist_credit.names.0.name" (name nc))
+          (cons "edit-recording.artist_credit.names.0.name"
+                (or (name nc) (name (artist nc))))
           (cons "edit-recording.artist_credit.names.0.join_phrase" "")
           (cons "edit-recording.artist_credit.names.0.artist.id"
-                (get-db-row (artist nc))))))
+                (princ-to-string (get-db-row (artist nc)))))))
 
 (defun rename-recording (new-name recording)
   (expect-302
