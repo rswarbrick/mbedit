@@ -47,9 +47,14 @@ result."))
                       (json-artist-search (name artist)))))
     (unless hit
       (error "Can't find DB row for ~A" artist))
-    (nth-value 0 (parse-integer (id hit)))))
 
-(defun edit-recording-parameters (new-name recording)
+    ;; I have no idea why, but small numbers get sent as integers over JSON (for
+    ;; example, Chopin is "id":83 and larger ones get sent as strings. Ho hum.
+    (nth-value 0
+               (if (integerp (id hit))
+                   (id hit) (parse-integer (id hit))))))
+
+(defun edit-recording-parameters (new-name recording &optional note)
   (let* ((name-credits (name-credits (artist-credit recording)))
          (nc (first name-credits)))
     (unless (and (= 1 (length name-credits)) (null (join-phrase nc)))
@@ -60,7 +65,7 @@ result."))
           (cons "edit-recording.length" (aif (recording-length recording)
                                              (format-time-period it)
                                              ""))
-          (cons "edit-recording.edit_note" "")
+          (cons "edit-recording.edit_note" (or note ""))
           (cons "edit-recording.as_auto_editor" "1")
 
           (cons "edit-recording.artist_credit.names.0.artist.name"
@@ -71,12 +76,12 @@ result."))
           (cons "edit-recording.artist_credit.names.0.artist.id"
                 (princ-to-string (get-db-row (artist nc)))))))
 
-(defun rename-recording (new-name recording)
+(defun rename-recording (new-name recording &optional note)
   (expect-302
     (drakma:http-request
      (get-edit-url recording)
      :method :post
-     :parameters (edit-recording-parameters new-name recording)
+     :parameters (edit-recording-parameters new-name recording note)
      :cookie-jar *cookie-jar*))
   (values))
 
@@ -86,7 +91,8 @@ result."))
       (format t "Renaming recording from:~%  ~A~%to~%  ~A~%... "
               (title recording) new-name)
       (finish-output)
-      (rename-recording new-name recording)
+      (rename-recording new-name recording
+                        "Taking recording title from release track name.")
       (format t "Done.~%")
       (finish-output)
       (forget-cached recording)))
