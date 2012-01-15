@@ -80,25 +80,34 @@
               work))
           names))
 
-(defun add-work-list (composer parent-name other-names
+(defun add-work-list (composer parent other-names
                       &optional begin-date end-date)
   "Add a given work list. If BEGIN-DATE is specified and not END-DATE, makes
-them equal. Returns the parent work."
+them equal. Returns the parent work, which is created if PARENT is a string and
+is merely used if it is an MB-OBJECT."
   (unless end-date
     (setf end-date begin-date))
+  
+  (cond
+    ((stringp parent)
+     (setf parent (create-dated-work composer parent begin-date end-date)))
+    ((typep parent 'work))
+    (t
+     (error "PARENT must be either a string or an work object (got ~A)."
+            parent)))
 
-  (let ((parent (create-dated-work composer parent-name begin-date end-date)))
-    (add-works-below-parent parent composer other-names
-                            :begin-date begin-date :end-date end-date)
-    parent))
+  (add-works-below-parent parent composer other-names
+                          :begin-date begin-date :end-date end-date)
+  parent)
 
-(defun make-standard-work-list (composer parent-name movement-names
-                                &optional begin-date end-date)
+(defun make-standard-work-list (composer parent movement-names
+                                &key begin-date end-date (first-index 1))
   "Returns the parent work. Like ADD-WORK-LIST, but automatically prepends the
 parent name to each movement name, along with a roman numeral."
-  (add-work-list
-   composer parent-name
-   (mapcar (lambda (n mvmnt) (format nil "~A: ~@:R. ~A" parent-name n mvmnt))
-           (alexandria:iota (length movement-names) :start 1)
-           movement-names)
-   begin-date end-date))
+  (let ((parent-name (if (stringp parent) parent (title parent))))
+    (add-work-list
+     composer parent
+     (mapcar (lambda (n mvmnt) (format nil "~A: ~@R. ~A" parent-name n mvmnt))
+             (alexandria:iota (length movement-names) :start first-index)
+             movement-names)
+     begin-date end-date)))
