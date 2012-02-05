@@ -83,8 +83,7 @@ produces an MB-OBJECT from a json-object."
        (defmethod json-to-object ((x ,full-name))
          (make-instance ',name :id (gid x))))))
 
-(def-json-class artist
-    sortname)
-
-(def-json-class recording
-    appears-on artist (length recording-length) isrcs)
+(def-json-class artist sortname)
+(def-json-class recording appears-on artist (length recording-length) isrcs)
+(def-json-class release)
+(def-json-class work artists)
