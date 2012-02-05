@@ -160,3 +160,38 @@ classes."
     ;; This gets the relevant page
     (fetch-relationship-type-texts 'artist 'recording))
   (second (assoc instrument-name *instrument-tree* :test #'string=)))
+
+(defparameter *relationship-attribute-makers* (make-hash-table :test #'equal))
+
+(defmacro def-relationship-attributes (type class0 class1 &body body)
+  "Register something that produces any required extra parameters for a given
+type of relationship. BODY is run with RELATION and ATTRIBUTES bound to the
+relation and the list of its attribute list, respectively."
+  `(setf (gethash ',(list type class0 class1) *relationship-attribute-makers*)
+         (lambda (relation)
+           (let ((attributes (and (attributes relation)
+                                  (attributes (attributes relation)))))
+             (declare (ignorable attributes))
+             ,@body))))
+
+(def-relationship-attributes "instrument" artist recording
+  (list (cons "ar.attrs.instrument.0"
+              (princ-to-string (get-instrument-id (first attributes))))))
+
+(def-relationship-attributes "performance" recording work
+  nil)
+
+(defun get-relationship-attributes (owner relation)
+  "Find any extra parameters that need to be passed to relationship edits for
+this relation."
+  (let ((class0 (class-name (class-of owner)))
+        (class1 (class-name (class-of (target relation)))))
+    (when (classes-backwards-p class0 class1)
+      (let ((tmp class0)) (setf class0 class1 class1 tmp)))
+    (let ((rel-at-maker
+           (gethash (list (relation-type relation) class0 class1)
+                    *relationship-attribute-makers*)))
+      (unless rel-at-maker
+        (error "Couldn't find a relationship attribute maker for triple ~A."
+               (list (relation-type relation) class0 class1)))
+      (funcall rel-at-maker relation))))

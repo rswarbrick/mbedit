@@ -4,7 +4,7 @@
 
 (defsystem mbedit
     :depends-on (:drakma :alexandria :mbcl :anaphora :split-sequence :yason
-                 :closure-html :cxml-stp)
+                 :closure-html :cxml-stp :cl-ppcre)
     :components
     ((:file "package")
      (:file "config" :depends-on ("package"))
@@ -17,4 +17,6 @@
      (:file "add-work" :depends-on ("package" "login" "recording-to-work"))
      (:file "interface" :depends-on ("package"))
      (:file "util" :depends-on ("package"))
-     (:file "relation-types" :depends-on ("package" "login" "util"))))
+     (:file "relation-types" :depends-on ("package" "login" "util"))
+     (:file "date-recordings"
+            :depends-on ("package" "relation-types" "json" "util"))))
