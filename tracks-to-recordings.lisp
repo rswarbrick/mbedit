@@ -45,32 +45,6 @@ release.")
 (defun get-edit-url (object)
   (format nil "~A~A/~A/edit" *mb-root-url* (table-name object) (id object)))
 
-(defgeneric really-get-db-row (mb-object)
-  (:documentation
-   "Using some nasty internal JSON based stuff, get the DB row id for the given
-object."))
-
-(defgeneric get-db-row (mb-object)
-  (:documentation
-   "Find the DB row for a given MB-OBJECT (required for some edits). Caches the
-result."))
-
-(defmethod get-db-row ((mbo mb-object))
-  (or (gethash (id mbo) *db-row-cache*)
-      (setf (gethash (id mbo) *db-row-cache*) (really-get-db-row mbo))))
-
-(defmethod really-get-db-row ((artist artist))
-  (let ((hit (find-if (lambda (ja) (string= (gid ja) (id artist)))
-                      (json-artist-search (name artist)))))
-    (unless hit
-      (error "Can't find DB row for ~A" artist))
-
-    ;; I have no idea why, but small numbers get sent as integers over JSON (for
-    ;; example, Chopin is "id":83 and larger ones get sent as strings. Ho hum.
-    (nth-value 0
-               (if (integerp (id hit))
-                   (id hit) (parse-integer (id hit))))))
-
 (defun edit-recording-parameters (track recording &optional note)
   (unless (or (artist-credit track) (artist-credit recording))
     (error "Track ~A has no artist credit." track))

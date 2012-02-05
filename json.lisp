@@ -37,6 +37,20 @@ table)."
          (read-json-initargs json-hash
                              (append other-params '(comment name id gid)))))
 
+(defgeneric really-get-db-row (mb-object)
+  (:documentation
+   "Using some nasty internal JSON based stuff, get the DB row id for the given
+object."))
+
+(defgeneric get-db-row (mb-object)
+  (:documentation
+   "Find the DB row for a given MB-OBJECT (required for some edits). Caches the
+result."))
+
+(defmethod get-db-row ((mbo mb-object))
+  (or (gethash (id mbo) *db-row-cache*)
+      (setf (gethash (id mbo) *db-row-cache*) (really-get-db-row mbo))))
+
 (defmacro def-json-class (name &rest slot-names)
   "Define a subclass of JSON-MB-OBJECT with name JSON-<NAME> and slots given by
 SLOT-NAMES. These are either symbols or (for cases where we'd clash with :cl or
@@ -81,9 +95,21 @@ produces an MB-OBJECT from a json-object."
                           (cons "page" "1")
                           (cons "direct" (if direct "true" "false"))))))))
        (defmethod json-to-object ((x ,full-name))
-         (make-instance ',name :id (gid x))))))
+         (make-instance ',name :id (gid x)))
+       (defmethod really-get-db-row ((x ,name))
+         (let ((hit (find-if (lambda (y) (string= (gid y) (id x)))
+                             (,search-name (moniker x)))))
+           (unless hit
+             (error "Can't find DB row for ~A" x))
+           ;; I have no idea why, but small numbers get sent as integers over
+           ;; JSON (for example, Chopin is "id":83 and larger ones get sent as
+           ;; strings. Ho hum.
+           (nth-value 0
+                      (if (integerp (id hit))
+                          (id hit) (parse-integer (id hit)))))))))
 
 (def-json-class artist sortname)
 (def-json-class recording appears-on artist (length recording-length) isrcs)
 (def-json-class release)
 (def-json-class work artists)
+
