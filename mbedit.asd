@@ -3,7 +3,8 @@
 (in-package :mbedit-asd)
 
 (defsystem mbedit
-    :depends-on (:drakma :alexandria :mbcl :anaphora :split-sequence :yason)
+    :depends-on (:drakma :alexandria :mbcl :anaphora :split-sequence :yason
+                 :closure-html :cxml-stp)
     :components
     ((:file "package")
      (:file "config" :depends-on ("package"))
@@ -13,4 +14,5 @@
      (:file "browser" :depends-on ("package"))
      (:file "tracks-to-recordings"
             :depends-on ("package" "login" "recording-to-work" "json"))
-     (:file "add-work" :depends-on ("package" "login" "recording-to-work"))))
+     (:file "add-work" :depends-on ("package" "login" "recording-to-work"))
+     (:file "relation-types" :depends-on ("package" "login"))))
