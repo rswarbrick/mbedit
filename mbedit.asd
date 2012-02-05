@@ -15,4 +15,5 @@
      (:file "tracks-to-recordings"
             :depends-on ("package" "login" "recording-to-work" "json"))
      (:file "add-work" :depends-on ("package" "login" "recording-to-work"))
+     (:file "interface" :depends-on ("package"))
      (:file "relation-types" :depends-on ("package" "login"))))
