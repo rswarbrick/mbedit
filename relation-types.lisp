@@ -24,11 +24,11 @@
      "       performed {additional} {guest} {solo} {instrument} on")
     (("performance" recording work)
      "    is a {partial} {live} {instrumental} {cover} performance of"))
-  "this records the html strings used on the edit page for the various
+  "This records the html strings used on the edit page for the various
 relationship types.")
 
 (defparameter *rel-types-ids* nil
-  "this is an alist dictionary, keyed by the triple: relationship type (string),
+  "This is an alist dictionary, keyed by the triple: relationship type (string),
   class0, class1.")
 
 (defparameter *rel-types-class-pairs-fetched* nil
@@ -55,7 +55,7 @@ relationship types.")
                        :cookie-jar *cookie-jar*))
 
 (defun delete-nils (seq)
-  "remove all nils from the sequence and return it. may modify seq."
+  "Remove all nils from the sequence and return it. may modify seq."
   (delete-if-not #'identity seq))
 
 (defun fetch-relationship-type-texts (class0 class1)
