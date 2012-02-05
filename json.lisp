@@ -51,6 +51,20 @@ result."))
   (or (gethash (id mbo) *db-row-cache*)
       (setf (gethash (id mbo) *db-row-cache*) (really-get-db-row mbo))))
 
+(defun perform-json-search (search-function mbid moniker)
+  "Do the JSON search required for the given object. We first try an indexed
+search (since it's more polite), then run direct searches up to 10 pages
+deep. The search function has arguments (NAME &key DIRECT PAGE)."
+  (flet ((find-match (lst)
+           (find-if (lambda (x) (string= (gid x) mbid)) lst)))
+    (or (find-match (funcall search-function moniker))
+        (dolist (page (alexandria:iota 10 :start 1))
+          (let ((results (funcall search-function moniker
+                                  :direct t :page page)))
+            ;; If we ran out of actual pages, we get NIL so give up.
+            (unless results (return nil))
+            (awhen (find-match results) (return it)))))))
+
 (defmacro def-json-class (name &rest slot-names)
   "Define a subclass of JSON-MB-OBJECT with name JSON-<NAME> and slots given by
 SLOT-NAMES. These are either symbols or (for cases where we'd clash with :cl or
@@ -85,20 +99,19 @@ produces an MB-OBJECT from a json-object."
            (format stream "'~A'" (name x))))
        (defun ,reader-name (json-hash)
          (read-json-object ',full-name ',(mapcar #'car slot-forms) json-hash))
-       (defun ,search-name (name &optional direct)
+       (defun ,search-name (name &key direct (page 1))
          (mapcar #',reader-name
                  (butlast
                   (json:parse
                    (mb-json-call
                     ,search-url
                     (list (cons "q" name)
-                          (cons "page" "1")
+                          (cons "page" (princ-to-string page))
                           (cons "direct" (if direct "true" "false"))))))))
        (defmethod json-to-object ((x ,full-name))
          (make-instance ',name :id (gid x)))
        (defmethod really-get-db-row ((x ,name))
-         (let ((hit (find-if (lambda (y) (string= (gid y) (id x)))
-                             (,search-name (moniker x)))))
+         (let ((hit (perform-json-search #',search-name (id x) (moniker x))))
            (unless hit
              (error "Can't find DB row for ~A" x))
            ;; I have no idea why, but small numbers get sent as integers over
@@ -112,4 +125,3 @@ produces an MB-OBJECT from a json-object."
 (def-json-class recording appears-on artist (length recording-length) isrcs)
 (def-json-class release)
 (def-json-class work artists)
-
