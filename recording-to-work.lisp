@@ -11,21 +11,9 @@
                &entity0=~A&entity1=~A"
           *mb-root-url* (id recording) (id work)))
 
-(defun date-parameters (name date)
-  "Return a list of parameters <name>.year, <name>.month and <name>.day filled
-in from DATE (which can be NIL)."
-  (mapcar (lambda (suffix accessor)
-            (cons (concatenate 'string name "." suffix)
-                  (aif (and date (funcall accessor date))
-                       (princ-to-string it)
-                       "")))
-          '("year" "month" "day")
-          '(year month day)))
-
 (defun create-relation-parameters (type-id &key begin-date end-date edit-note auto-edit)
   `(("ar.link_type_id" . ,(princ-to-string type-id))
-    ,@(date-parameters "ar.begin_date" begin-date)
-    ,@(date-parameters "ar.end_date" end-date)
+    ,@(ar-period-parameters begin-date end-date)
     ("ar.edit_note" . ,(or edit-note ""))
     ("ar.as_auto_editor" . ,(if auto-edit "1" "0"))))
 
