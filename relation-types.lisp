@@ -36,6 +36,9 @@ relationship types.")
 (defparameter *rel-types-class-pairs-stored* nil
   "A list of the pairs of classes that have been fetched so far.")
 
+(defparameter *instrument-tree* nil
+  "A list of pairs with instrument name and number.")
+
 (defun relate-edit-page-url (class0 class1)
   (let ((type0 (string-downcase (symbol-name class0)))
         (type1 (string-downcase (symbol-name class1)))
@@ -58,31 +61,46 @@ relationship types.")
   "Remove all nils from the sequence and return it. may modify seq."
   (delete-if-not #'identity seq))
 
-(defun fetch-relationship-type-texts (class0 class1)
-  (let ((select-node 
-         (car (stp:filter-recursively
-               (lambda (node)
-                 (and (typep node 'stp:element)
-                      (string= (stp:local-name node) "select")
-                      (awhen (stp:find-attribute-named node "id")
-                        (string= (stp:string-value it) "id-ar.link_type_id"))))
-               (chtml:parse (get-relate-edit-page class0 class1)
-                            (stp:make-builder))))))
-    (unless select-node
-      (error "couldn't get the select node for class pair: ~a, ~a."
-             class0 class1))
+(defun get-select-children (id parsed-data)
+  (let ((node (car (stp:filter-recursively
+                    (lambda (node)
+                      (and (typep node 'stp:element)
+                           (string= (stp:local-name node) "select")
+                           (awhen (stp:find-attribute-named node "id")
+                             (string= (stp:string-value it) id))))
+                    parsed-data))))
+    (unless node
+      (error "Couldn't get the select node called ~A in the given page." id))
+    (delete-nils
+     (stp:map-children 'list
+                       (lambda (option)
+                         (awhen (stp:find-attribute-named option "value")
+                           (list (stp:data (stp:first-child option))
+                                 (stp:value it))))
+                       node))))
 
+(defun read-instrument-tree (parsed-data)
+  (setf *instrument-tree*
+        (mapcar (lambda (pr)
+                  (list (string-left-trim '(#\no-break_space) (first pr))
+                        (parse-integer (second pr))))
+                (get-select-children "id-ar.attrs.instrument.0" parsed-data))))
+
+(defun fetch-relationship-type-texts (class0 class1)
+  (let* ((parsed (chtml:parse
+                  (get-relate-edit-page class0 class1) (stp:make-builder))))
     (let ((pairs
-           (delete-nils
-            (stp:map-children 'list
-                              (lambda (option)
-                                (awhen (stp:find-attribute-named option "value")
-                                  (list (stp:data (stp:first-child option))
-                                        (parse-integer (stp:value it)))))
-                              select-node))))
+           (mapcar (lambda (pr)
+                     (list (first pr) (parse-integer (second pr))))
+                   (get-select-children "id-ar.link_type_id" parsed))))
       (pushnew (cons (list class0 class1) pairs)
                *rel-types-class-pairs-fetched*
                :test #'equalp :key #'car)
+
+      ;; If this happens to have the instruments as well, let's grab them as
+      ;; they go by...
+      (when (and (eq class0 'artist) (eq class1 'recording))
+        (read-instrument-tree parsed))
       pairs)))
 
 (defun get-relationship-type-texts (class0 class1)
@@ -144,3 +162,10 @@ classes."
        (second it))
       (t
        (error "Could not find type ID for given relationship.")))))
+
+(defun get-instrument-id (instrument-name)
+  "Get the ID for a given instrument name."
+  (unless *instrument-tree*
+    ;; This gets the relevant page
+    (fetch-relationship-type-texts 'artist 'recording))
+  (second (assoc instrument-name *instrument-tree* :test #'string=)))
