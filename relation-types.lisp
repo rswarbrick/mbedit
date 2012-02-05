@@ -57,10 +57,6 @@ relationship types.")
   (drakma:http-request (relate-edit-page-url class0 class1)
                        :cookie-jar *cookie-jar*))
 
-(defun delete-nils (seq)
-  "Remove all nils from the sequence and return it. may modify seq."
-  (delete-if-not #'identity seq))
-
 (defun get-select-children (id parsed-data)
   (let ((node (car (stp:filter-recursively
                     (lambda (node)
@@ -107,11 +103,6 @@ relationship types.")
   (or (cdr (find (list class0 class1) *rel-types-class-pairs-fetched*
                  :test #'equalp :key #'car))
       (fetch-relationship-type-texts class0 class1)))
-
-(defun map-filter (transform sequence &rest more-sequences)
-  "Apply transform to the elements of sequence via a map, yielding a list. then
-throw away any nils."
-  (delete-nils (apply #'map 'list transform sequence more-sequences)))
 
 (defun store-relationship-type-ids (class0 class1)
   "Read the HTML texts we've pulled and store the actual type ids that we
