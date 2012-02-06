@@ -22,6 +22,10 @@
 (defparameter *rel-types-html-strings*
   '((("instrument" artist recording)
      "       performed {additional} {guest} {solo} {instrument} on")
+    (("performing orchestra" artist recording)
+     "    {orchestra} orchestra {additional:additionally} performed")
+    (("conductor" artist recording)
+     "    {additional:additionally} conducted")
     (("performance" recording work)
      "    is a {partial} {live} {instrumental} {cover} performance of"))
   "This records the html strings used on the edit page for the various
@@ -177,6 +181,20 @@ relation and the list of its attribute list, respectively."
 (def-relationship-attributes "instrument" artist recording
   (list (cons "ar.attrs.instrument.0"
               (princ-to-string (get-instrument-id (first attributes))))))
+
+(def-relationship-attributes "performing orchestra" artist recording
+  ;; Maybe I should be grabbing and parsing this, but I really can't be
+  ;; bothered...
+  (list (cons "ar.attrs.orchestra.0"
+              (princ-to-string
+               (cond
+                 ((not (first attributes)) "")
+                 ((string= (first attributes) "symphony") 244)
+                 ((string= (first attributes) "chamber") 245)
+                 ((string= (first attributes) "other") 246))))))
+
+(def-relationship-attributes "conductor" artist recording
+  nil)
 
 (def-relationship-attributes "performance" recording work
   nil)
