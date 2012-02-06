@@ -26,20 +26,23 @@ release.")
   (or (null (title track))
       (string= (title track) (title recording))))
 
-(defun recording-needs-renaming-p (track recording)
+(defun recording-needs-renaming-p (track recording &optional force)
   (and
    (not (and (titles-agree-p track recording)
              (artist-credits-agree-p track recording)))
-   (if (= 1 (length (tracks-with-recording recording)))
+   (if (or force
+           (= 1 (length (tracks-with-recording recording))))
        t
        (when *tracks-to-recordings-debug*
-         (format t "Not renaming recording ~A (track name ~A) because ~
-                    it appears on multiple releases."
-                 recording (title track))
+         (format t "Not renaming recording '~A' (track name '~A') because ~
+                    it appears on multiple releases.~%"
+                 (title recording) (title track))
+         (force-output)
          nil))))
 
-(defun pairs-to-rename (release)
-  (remove-if-not (lambda (pair) (apply #'recording-needs-renaming-p pair))
+(defun pairs-to-rename (release &optional force)
+  (remove-if-not (lambda (pair) (recording-needs-renaming-p
+                                 (first pair) (second pair) force))
                  (track-recording-pairs release)))
 
 (defun get-edit-url (object)
@@ -100,10 +103,10 @@ release.")
   (finish-output)
   (forget-cached recording))
 
-(defun track-names-to-recordings (release)
+(defun track-names-to-recordings (release &key force)
   (unwind-protect
        (let ((skip-next-track nil))
-         (dolist (pair (pairs-to-rename release))
+         (dolist (pair (pairs-to-rename release force))
            (restart-case
                (if skip-next-track
                    (setf skip-next-track nil)
