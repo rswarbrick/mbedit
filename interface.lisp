@@ -28,5 +28,5 @@ case, it denotes that track on the first and only medium."
            (unless (<= 1 a b (length tracks))
              (error "Can't find tracks ~A to ~A on medium ~A (has ~A tracks)"
                     a b c (length tracks)))
-           (mapcar #'recording (subseq tracks (1- a) (1- b))))))
+           (mapcar #'recording (subseq tracks (1- a) b)))))
      tracklist)))
