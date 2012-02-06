@@ -120,6 +120,25 @@ and tags them. Checks for incompatible dates unless FORCE is given."
     (format t "done.~%")
     (force-output)))
 
+(defun copy-some-recording-dates (recordings &key auto-edit edit-note)
+  "For each recording in RECORDINGS, this checks whether there is any date set
+on any AR from it. If so (and the dates that are set agree) it copies the date
+to the other dateable ARs."
+  (dolist (rec recordings)
+    (format t "Recording '~A'... " (title rec))
+    (force-output)
+    (let ((periods (recording-periods rec)))
+      (cond
+        ((not (periods-agree-p periods))
+         (format t "~%  [EE] Recording periods do not agree.~%"))
+        ((not periods)
+         (format t "~%  [EE] No recording dates.~%"))
+        (t
+         (date-relations rec (first (first periods)) (second (first periods))
+                         :auto-edit auto-edit :edit-note edit-note)
+         (format t "done.~%")))
+      (force-output))))
+
 ;; Example usage:
 ;;
 ;; (date-some-recordings
