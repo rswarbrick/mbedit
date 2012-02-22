@@ -99,15 +99,21 @@ conflicting dates."
 (defun actually-date-relation (recording relation begin end
                                auto-edit edit-note)
   "Actually set the relationship's date."
-  (expect-302
-    (drakma:http-request
-     (format nil "~Aedit/relationship/edit" *mb-root-url*)
-     :method :post
-     :parameters (date-relation-parameters recording relation
-                                           begin end auto-edit edit-note)
-     :cookie-jar *cookie-jar*))
-  (forget-cached recording)
-  (forget-cached (target relation)))
+  (handler-case
+      (progn
+        (expect-302
+          (drakma:http-request
+           (format nil "~Aedit/relationship/edit" *mb-root-url*)
+           :method :post
+           :parameters (date-relation-parameters recording relation
+                                                 begin end auto-edit edit-note)
+           :cookie-jar *cookie-jar*))
+        (forget-cached recording)
+        (forget-cached (target relation)))
+    (not-dateable (c)
+      (declare (ignore c))
+      (values)))
+  (values))
 
 (defun date-some-recordings (recordings begin end &key force auto-edit edit-note)
   "Takes a list of recordings (consider using GET-RELEASE-RECORDINGS) and dates

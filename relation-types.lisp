@@ -20,14 +20,22 @@
      ,(make-mb-ob "work" "ddb3e4c4-bc8f-357d-bb2c-1a88b6ad5516"))))
 
 (defparameter *rel-types-html-strings*
-  '((("instrument" artist recording)
+  `((("instrument" artist recording)
      "       performed {additional} {guest} {solo} {instrument} on")
     (("performing orchestra" artist recording)
      "    {orchestra} orchestra {additional:additionally} performed")
     (("conductor" artist recording)
      "    {additional:additionally} conducted")
     (("performance" recording work)
-     "    is a {partial} {live} {instrumental} {cover} performance of"))
+     "    is a {partial} {live} {instrumental} {cover} performance of")
+    (("producer" artist recording)
+     ,(concatenate 'string
+                   "    {additional:additionally} {assistant} {associate}"
+                   " {co:co-}{executive:executive }produced"))
+    (("recording" artist recording)
+     ,(concatenate 'string
+                   "       {additional:additionally} {assistant} {associate}"
+                   " {co:co-}recorded")))
   "This records the html strings used on the edit page for the various
 relationship types.")
 
@@ -167,6 +175,12 @@ classes."
 
 (defparameter *relationship-attribute-makers* (make-hash-table :test #'equal))
 
+;; Throw this when looking for attributes for a relation where it doesn't make
+;; sense to set a date. This is spectacularly specific to the problem of adding
+;; recording dates, but I can come up with something more general when I have a
+;; use-case! :-)
+(define-condition not-dateable () ())
+
 (defmacro def-relationship-attributes (type class0 class1 &body body)
   "Register something that produces any required extra parameters for a given
 type of relationship. BODY is run with RELATION and ATTRIBUTES bound to the
@@ -177,6 +191,12 @@ relation and the list of its attribute list, respectively."
                                   (attributes (attributes relation)))))
              (declare (ignorable attributes))
              ,@body))))
+
+(defun def-not-dateable-relationship (type class0 class1)
+  (setf (gethash (list type class0 class1) *relationship-attribute-makers*)
+        (lambda (relation)
+          (declare (ignore relation))
+          (error 'not-dateable))))
 
 (def-relationship-attributes "instrument" artist recording
   (list (cons "ar.attrs.instrument.0"
@@ -198,6 +218,9 @@ relation and the list of its attribute list, respectively."
 
 (def-relationship-attributes "performance" recording work
   nil)
+
+(def-not-dateable-relationship "recording" 'artist 'recording)
+(def-not-dateable-relationship "producer" 'artist 'recording)
 
 (defun get-relationship-attributes (owner relation)
   "Find any extra parameters that need to be passed to relationship edits for
