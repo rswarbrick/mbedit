@@ -25,9 +25,14 @@
                                               :cookie-jar *cookie-jar*)))
 
 (defun extract-relation-rows (relations html)
-  (let ((acc))
+  (let ((acc)
+        (relationships-header-pos (search "<h2>Relationships</h2>" html)))
+    ;; You have to jump past here first, otherwise you pick up release artist
+    ;; credits and everything goes pear shaped...
+    (unless relationships-header-pos
+      (error "Couldn't find relationships header."))
     (dolist (rel relations)
-      (let ((pos (search (id (target rel)) html)))
+      (let ((pos (search (id (target rel)) html :start2 relationships-header-pos)))
         (unless pos
           (error "Can't find a reference to ~A in html page." (target rel)))
         (setf pos (search "http://musicbrainz.org/edit/relationship/delete"
