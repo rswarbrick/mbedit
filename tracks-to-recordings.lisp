@@ -117,25 +117,6 @@ release.")
   (finish-output)
   (forget-cached recording))
 
-(defun skippable-each (fun sequence &key (noun "element"))
-  "Call (FUN ELT) for each ELT in SEQUENCE. This is done in a RESTART-CASE which
-allows the user to retry or skip an element if it's causing an error."
-  (map nil
-       (lambda (elt)
-         (loop
-            (let ((repeat nil))
-              (restart-case
-                  (funcall fun elt)
-
-                (skip-this-elt ()
-                  :report (lambda (stream)
-                            (format stream "Skip this ~A" noun)))
-                (try-again ()
-                  :report "Try again"
-                  (setf repeat t)))
-              (unless repeat (return)))))
-       sequence))
-
 (defun each-track (fun release &key pred)
   "Call (FUN track rec) for each track/recording pair. If PRED is supplied, only
 pairs for which PRED is true are used."

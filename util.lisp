@@ -31,3 +31,34 @@ in from DATE (which can be NIL)."
              (string= "backward" (direction relation)))
       (values (target relation) owner)
       (values owner (target relation))))
+
+(defun last-word (string)
+  "Find the last word (separated by spaces) of STRING."
+  (let ((pos (position #\Space string :from-end t)))
+    (if pos (subseq string (1+ pos)) string)))
+
+(defmacro do-skippable (noun &body body)
+  "Run BODY inside a restart-case that allows us to repeat if something goes
+wrong or skip execution if the user decides it isn't going to work."
+  (let ((repeat (gensym)) (output (gensym)))
+    `(loop
+        (let ((,repeat nil)
+              (,output nil))
+          (restart-case
+              (setf ,output
+                    (progn ,@body))
+          
+            (skip-this-elt ()
+              :report (lambda (stream)
+                        (format stream "Skip this ~A" ,noun))
+              (return))
+
+            (try-again ()
+              :report "Try again"
+              (setf ,repeat t)))
+          (unless ,repeat (return ,output))))))
+
+(defun skippable-each (fun sequence &key (noun "element"))
+  "Call (FUN ELT) for each ELT in SEQUENCE. This is done in a RESTART-CASE which
+allows the user to retry or skip an element if it's causing an error."
+  (map nil (lambda (elt) (do-skippable noun (funcall fun elt))) sequence))
