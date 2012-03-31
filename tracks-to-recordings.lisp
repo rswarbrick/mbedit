@@ -117,37 +117,46 @@ release.")
   (finish-output)
   (forget-cached recording))
 
+(defun skippable-each (fun sequence &key (noun "element"))
+  "Call (FUN ELT) for each ELT in SEQUENCE. This is done in a RESTART-CASE which
+allows the user to retry or skip an element if it's causing an error."
+  (map nil
+       (lambda (elt)
+         (loop
+            (let ((repeat nil))
+              (restart-case
+                  (funcall fun elt)
+
+                (skip-this-elt ()
+                  :report (lambda (stream)
+                            (format stream "Skip this ~A" noun)))
+                (try-again ()
+                  :report "Try again"
+                  (setf repeat t)))
+              (unless repeat (return)))))
+       sequence))
+
 (defun each-track (fun release &key pred)
   "Call (FUN track rec) for each track/recording pair. If PRED is supplied, only
 pairs for which PRED is true are used."
-  (unwind-protect
-       (let ((skip-next-track nil))
-         (dolist (pair (if pred
-                           (remove-if-not
-                            (lambda (pair)
-                              (funcall pred (first pair) (second pair)))
-                            (track-recording-pairs release))
-                           (track-recording-pairs release)))
-           (restart-case
-               (if skip-next-track
-                   (setf skip-next-track nil)
-                   (destructuring-bind (track recording) pair
-                     (funcall fun track recording)))
-             (skip-this-track ()
-               :report "Skip this track"
-               (format t "Skipped.~%")
-               (finish-output)
-               (setf skip-next-track t))
-             (try-again ()
-               (format t "Retry.~%")
-               (finish-output)
-               :report "Try again"))))))
+  (skippable-each (lambda (pair)
+                    (destructuring-bind (track recording) pair
+                      (funcall fun track recording)))
+                  (if pred
+                      (remove-if-not
+                       (lambda (pair)
+                         (funcall pred (first pair) (second pair)))
+                       (track-recording-pairs release))
+                      (track-recording-pairs release))
+                  :noun "track"))
 
 (defun track-names-to-recordings (release &key force)
-  (each-track #'set-recording-from-track-name
-              release
-              :pred (lambda (track recording)
-                      (recording-needs-renaming-p track recording force)))
+  (unwind-protect
+       (each-track #'set-recording-from-track-name
+                   release
+                   :pred (lambda (track recording)
+                           (recording-needs-renaming-p track recording force)))
+    (clear-cache))
   (values))
 
 (defun csg-split-release-artists (release)
@@ -173,19 +182,21 @@ performing artists on the release."
     (declare (ignore composers))
     (unless (= 1 (length performers))
       (error "Can only cope with a single performer at the moment."))
-    (each-track
-     (lambda (track recording)
-       (format t "Track ~A: \"~A\". "
-               (pos track)
-               (shortened-string (or (title track) (title recording))
-                                 :max-length 50))
-       (force-output)
+    (unwind-protect
+         (each-track
+          (lambda (track recording)
+            (format t "Track ~A: \"~A\". "
+                    (pos track)
+                    (shortened-string (or (title track) (title recording))
+                                      :max-length 50))
+            (force-output)
 
-       (set-recording-artist (artist (first performers))
-                             recording
-                             :note "CSG recording artist = performer"
-                             :rename (name (first performers)))
+            (set-recording-artist (artist (first performers))
+                                  recording
+                                  :note "CSG recording artist = performer"
+                                  :rename (name (first performers)))
          
-       (format t "done~%")
-       (force-output))
-     release)))
+            (format t "done~%")
+            (force-output))
+          release)
+      (clear-cache))))
