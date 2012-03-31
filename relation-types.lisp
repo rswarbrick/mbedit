@@ -35,7 +35,15 @@
     (("recording" artist recording)
      ,(concatenate 'string
                    "       {additional:additionally} {assistant} {associate}"
-                   " {co:co-}recorded")))
+                   " {co:co-}recorded"))
+    (("editor" artist recording)
+     ,(concatenate 'string
+                   "       {additional:additionally} {assistant} {associate}"
+                   " {co:co-}edited"))
+    (("engineer" artist recording)
+     ,(concatenate 'string
+                   "    {additional:additionally} {assistant} {associate}"
+                   " {co:co-}{executive:executive }engineered")))
   "This records the html strings used on the edit page for the various
 relationship types.")
 
@@ -198,6 +206,11 @@ relation and the list of its attribute list, respectively."
           (declare (ignore relation))
           (error 'not-dateable))))
 
+(defun def-not-dateable-relationships (class0 class1 &rest types)
+  (map nil (lambda (type)
+             (def-not-dateable-relationship type class0 class1))
+       types))
+
 (def-relationship-attributes "instrument" artist recording
   (list (cons "ar.attrs.instrument.0"
               (princ-to-string (get-instrument-id (first attributes))))))
@@ -219,8 +232,8 @@ relation and the list of its attribute list, respectively."
 (def-relationship-attributes "performance" recording work
   nil)
 
-(def-not-dateable-relationship "recording" 'artist 'recording)
-(def-not-dateable-relationship "producer" 'artist 'recording)
+(def-not-dateable-relationships 'artist 'recording
+  "recording" "producer" "editor" "engineer")
 
 (defun get-relationship-attributes (owner relation)
   "Find any extra parameters that need to be passed to relationship edits for
