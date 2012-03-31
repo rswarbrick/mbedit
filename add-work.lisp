@@ -111,3 +111,46 @@ parent name to each movement name, along with a roman numeral."
              (alexandria:iota (length movement-names) :start first-index)
              movement-names)
      begin-date end-date)))
+
+(defun fformat (control-string &rest format-arguments)
+  "Format to standard output and flush."
+  (format t control-string format-arguments)
+  (force-output)
+  (values))
+
+(defun make-opera-or-ballet (composer tree &key begin-date end-date)
+  "Make an entire opera/ballet work tree. (CAR TREE) should be the name of the
+work, then the rest of the elements should be lists of scenes/numbers."
+  (unless end-date
+    (setf end-date begin-date))
+
+  (fformat "Creating ~S... " (first tree))
+  (let* ((work-name (first tree))
+         (acts (rest tree))
+         (parent (create-dated-work composer work-name begin-date end-date)))
+    (fformat "done.~%")
+    (loop for act in acts for act-no from 1
+       do
+         (progn
+           (fformat " Act ~D. Creating act work... " act-no)
+           (let ((act-work
+                  (create-dated-work
+                   composer (format nil "~A: Act ~@R" work-name act-no)
+                   begin-date end-date)))
+             (fformat "done.~%   Relating to parent... ")
+             (relate-to-parent act-work parent)
+             (fformat "done.~%")
+             (loop for scene in act for num from 1
+                do
+                  (let ((scene-name
+                         (format nil "~A: Act ~@R. ~D. ~A~%"
+                                 work-name act-no num scene))
+                        scene-work)
+                    (fformat "  Creating ~S... " scene-name)
+                    (setf scene-work
+                          (create-dated-work composer scene-name
+                                             begin-date end-date))
+                    (fformat "done.~%    Relating to parent... ")
+                    (relate-to-parent scene-work act-work)
+                    (fformat "done.~%"))))))
+    parent))
