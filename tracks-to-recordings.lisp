@@ -40,31 +40,26 @@ release.")
          (force-output)
          nil))))
 
-(defun pairs-to-rename (release &optional force)
-  (remove-if-not (lambda (pair) (recording-needs-renaming-p
-                                 (first pair) (second pair) force))
-                 (track-recording-pairs release)))
-
 (defun get-edit-url (object)
   (format nil "~A~A/~A/edit" *mb-root-url* (table-name object) (id object)))
 
-(defun edit-recording-parameters (track recording &optional note)
-  (unless (or (artist-credit track) (artist-credit recording))
-    (error "Track ~A has no artist credit." track))
-
-  (let* ((name-credits (name-credits (or (artist-credit track)
-                                         (artist-credit recording))))
+(defun edit-recording-parameters (recording
+                                  &key edit-note auto-edit
+                                    ac title comment length)
+  (let* ((name-credits (name-credits (or ac (artist-credit recording))))
          (nc (first name-credits)))
     (unless (and (= 1 (length name-credits)) (null (join-phrase nc)))
       (error "Artist credit too complicated for me!"))
 
-    (list (cons "edit-recording.name" (title track))
-          (cons "edit-recording.comment" (or (disambiguation recording) ""))
-          (cons "edit-recording.length" (aif (recording-length recording)
-                                             (format-time-period it)
-                                             ""))
-          (cons "edit-recording.edit_note" (or note ""))
-          (cons "edit-recording.as_auto_editor" "1")
+    (list (cons "edit-recording.name" (or title (title recording) ""))
+          (cons "edit-recording.comment"
+                (or comment (disambiguation recording) ""))
+          (cons "edit-recording.length"
+                (aif (or length (recording-length recording))
+                     (format-time-period it)
+                     ""))
+          (cons "edit-recording.edit_note" (or edit-note ""))
+          (cons "edit-recording.as_auto_editor" (if auto-edit "1" "0"))
 
           (cons "edit-recording.artist_credit.names.0.artist.name"
                 (name (artist nc)))
@@ -74,14 +69,33 @@ release.")
           (cons "edit-recording.artist_credit.names.0.artist.id"
                 (princ-to-string (get-db-row (artist nc)))))))
 
-(defun rename-recording (track recording &optional note)
+(defun track-to-recording-parameters (track recording &optional note)
+  (unless (or (artist-credit track) (artist-credit recording))
+    (error "Track ~A has no artist credit." track))
+
+  (edit-recording-parameters recording
+                             :edit-note note
+                             :auto-edit t
+                             :ac (artist-credit track)
+                             :title (title track)))
+
+(defun recording-edit (recording parameters)
   (expect-302
-    (drakma:http-request
-     (get-edit-url recording)
-     :method :post
-     :parameters (edit-recording-parameters track recording note)
-     :cookie-jar *cookie-jar*))
+    (drakma:http-request (get-edit-url recording)
+                         :method :post
+                         :parameters parameters
+                         :cookie-jar *cookie-jar*))
   (values))
+
+(defun rename-recording (track recording &optional note)
+  (recording-edit
+   recording (track-to-recording-parameters track recording note)))
+
+(defun set-recording-artist (artist recording &key note rename)
+  (recording-edit recording
+                  (edit-recording-parameters
+                   recording :edit-note note :auto-edit t
+                   :ac (make-artist-credit artist :name rename))))
 
 (defun set-recording-from-track-name (track recording)
   (format t "Working on track ~D: ~A~%"
@@ -103,15 +117,22 @@ release.")
   (finish-output)
   (forget-cached recording))
 
-(defun track-names-to-recordings (release &key force)
+(defun each-track (fun release &key pred)
+  "Call (FUN track rec) for each track/recording pair. If PRED is supplied, only
+pairs for which PRED is true are used."
   (unwind-protect
        (let ((skip-next-track nil))
-         (dolist (pair (pairs-to-rename release force))
+         (dolist (pair (if pred
+                           (remove-if-not
+                            (lambda (pair)
+                              (funcall pred (first pair) (second pair)))
+                            (track-recording-pairs release))
+                           (track-recording-pairs release)))
            (restart-case
                (if skip-next-track
                    (setf skip-next-track nil)
                    (destructuring-bind (track recording) pair
-                     (set-recording-from-track-name track recording)))
+                     (funcall fun track recording)))
              (skip-this-track ()
                :report "Skip this track"
                (format t "Skipped.~%")
@@ -120,6 +141,51 @@ release.")
              (try-again ()
                (format t "Retry.~%")
                (finish-output)
-               :report "Try again"))))
-    (forget-cached release))
+               :report "Try again"))))))
+
+(defun track-names-to-recordings (release &key force)
+  (each-track #'set-recording-from-track-name
+              release
+              :pred (lambda (track recording)
+                      (recording-needs-renaming-p track recording force)))
   (values))
+
+(defun csg-split-release-artists (release)
+  "Returns (VALUES COMPOSERS PERFORMERS), split by the semicolon as specified in
+the CSG."
+  (do* ((ncs (name-credits (artist-credit release)) (cdr ncs))
+        (composers nil (cons (car ncs) composers)))
+       ((null ncs)
+        (error "No semicolon-terminated NC found."))
+    (when (find #\; (join-phrase (first ncs)))
+      (return
+        (values
+         (reverse (cons (make-name-credit (artist (first ncs))
+                                          :title (name (first ncs)))
+                        composers))
+         (rest ncs))))))
+
+(defun set-csg-recording-artists (release)
+  "Go through the recordings in RELEASE and set each one's artist to the
+performing artists on the release."
+  (multiple-value-bind (composers performers)
+      (csg-split-release-artists release)
+    (declare (ignore composers))
+    (unless (= 1 (length performers))
+      (error "Can only cope with a single performer at the moment."))
+    (each-track
+     (lambda (track recording)
+       (format t "Track ~A: \"~A\". "
+               (pos track)
+               (shortened-string (or (title track) (title recording))
+                                 :max-length 50))
+       (force-output)
+
+       (set-recording-artist (artist (first performers))
+                             recording
+                             :note "CSG recording artist = performer"
+                             :rename (name (first performers)))
+         
+       (format t "done~%")
+       (force-output))
+     release)))
