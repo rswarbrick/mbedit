@@ -39,7 +39,7 @@
           rec (title rec) (page rec))
   (loop
      (format t "Relate?~% (1) Yes~% (2) No~% ~
-                          (3) Inspect~% (*) No and quit~%   -> ")
+                          (3) View in browser~% (*) No and quit~%   -> ")
      (finish-output)
      (let ((decision (read)))
        (cond
@@ -53,7 +53,7 @@
           (format t "Skipping.~%")
           (return t))
          ((eql decision 3)
-          (inspect rec))
+          (browse-object rec))
          (t
           (format t "Ok, we're done!~%")
           (return nil))))))
