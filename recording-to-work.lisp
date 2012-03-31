@@ -37,26 +37,37 @@
 (defun decide-about-recording (rec work)
   (format t "Recording: ~A~%Title:     ~A~%~A~%~%"
           rec (title rec) (page rec))
-  (loop
-     (format t "Relate?~% (1) Yes~% (2) No~% ~
-                          (3) View in browser~% (*) No and quit~%   -> ")
-     (finish-output)
-     (let ((decision (read)))
-       (cond
-         ((eql decision 1)
-          (format t "Relating....")
-          (finish-output)
-          (relate-recording-to-work rec work :auto-edit t)
-          (format t " done.~%")
-          (return t))
-         ((eql decision 2)
-          (format t "Skipping.~%")
-          (return t))
-         ((eql decision 3)
-          (browse-object rec))
-         (t
-          (format t "Ok, we're done!~%")
-          (return nil))))))
+  (let ((recognised-names (make-hash-table)))
+    (loop
+       (let ((decision))
+         (when (gethash (title rec) recognised-names)
+           (setf decision 1))
+         (unless decision
+           (format t "Relate?~% (1) Yes~% (2) No~% ~
+                                (3) View in browser~% ~
+                                (9) Yes, and all with the same name~% ~
+                                (*) No and quit~%   -> ")
+           (finish-output)
+           (setf decision (read)))
+         (cond
+           ((member decision '(1 9))
+            (do-skippable "recording"
+              (format t "Relating....")
+              (finish-output)
+              (relate-recording-to-work rec work :auto-edit t)
+              (format t " done.~%")
+              (finish-output)
+              (when (eql decision 9)
+                (setf (gethash (title rec) recognised-names) t)))
+            (return t))
+           ((eql decision 2)
+            (format t "Skipping.~%")
+            (return t))
+           ((eql decision 3)
+            (browse-object rec))
+           (t
+            (format t "Ok, we're done!~%")
+            (return nil)))))))
 
 (defun relate-recordings-to-work (recordings work &optional force)
   "Returns new set of recordings (the ones that still need looking at)."
@@ -87,3 +98,13 @@
 
 (defun recordings-with-no-work (artist-name search-string)
   (remove-if-not #'no-works-p (recordings-for-artist artist-name search-string)))
+
+(defun make-recording-search-string (composer terms)
+  (format nil "artist:\"~A\"~{ AND \"~A\"~}"
+          (last-word (name composer)) terms))
+
+(defun recordings-with-no-work-search (composer &rest terms)
+  "Find recordings with COMPOSER as artist and the given terms in the title (TERMS should be a list of strings). Filters these to just the recordings without a work relationship."
+  (remove-if-not #'no-works-p
+                 (pl-as-list
+                  (search-request (make-recording-search-string composer terms)))))
