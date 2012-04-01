@@ -22,6 +22,8 @@
 (defparameter *rel-types-html-strings*
   `((("instrument" artist recording)
      "       performed {additional} {guest} {solo} {instrument} on")
+    (("performer" artist recording)
+     "    {additional:additionally} {guest} {solo} performed")
     (("performing orchestra" artist recording)
      "    {orchestra} orchestra {additional:additionally} performed")
     (("conductor" artist recording)
@@ -210,6 +212,9 @@ relation and the list of its attribute list, respectively."
   (map nil (lambda (type)
              (def-not-dateable-relationship type class0 class1))
        types))
+
+(def-relationship-attributes "performer" artist recording
+  nil)
 
 (def-relationship-attributes "instrument" artist recording
   (list (cons "ar.attrs.instrument.0"
