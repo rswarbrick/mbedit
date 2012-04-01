@@ -85,6 +85,7 @@ release.")
                          :method :post
                          :parameters parameters
                          :cookie-jar *cookie-jar*))
+  (forget-cached recording)
   (values))
 
 (defun rename-recording (track recording &optional note)
