@@ -140,14 +140,15 @@ changes)."))
 (defmethod edit-relation ((owner mb-object) (relation relation)
                           &rest args &key target source &allow-other-keys)
   "Actually set the relationship's date."
-  (expect-302
-    (drakma:http-request
-     (format nil "~Aedit/relationship/edit" *mb-root-url*)
-     :method :post
-     :parameters (apply #'edit-relation-parameters owner relation args)
-     :cookie-jar *cookie-jar*))
-  (forget-cached owner)
-  (forget-cached (target relation))
-  (when target (forget-cached target))
-  (when source (forget-cached source))
+  (do-skippable "relationship"
+    (expect-302
+      (drakma:http-request
+       (format nil "~Aedit/relationship/edit" *mb-root-url*)
+       :method :post
+       :parameters (apply #'edit-relation-parameters owner relation args)
+       :cookie-jar *cookie-jar*))
+    (forget-cached owner)
+    (forget-cached (target relation))
+    (when target (forget-cached target))
+    (when source (forget-cached source)))
   (values))
