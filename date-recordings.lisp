@@ -79,10 +79,11 @@ to the other dateable ARs."
          (format t "done.~%")))
       (force-output))))
 
-(defun copy-release-recording-dates (release &key auto-edit edit-note)
+(defun copy-release-recording-dates (release)
   "Calls COPY-SOME-RECORDING-DATES on the recordings on the given release."
   (copy-some-recording-dates (pl-as-list (recordings release))
-                             :auto-edit auto-edit :edit-note edit-note))
+                             :auto-edit t
+                             :edit-note "Copying dates between ARs."))
 
 ;; Example usage:
 ;;
