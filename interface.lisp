@@ -8,7 +8,8 @@ and C is not given, it is taken to be 1. Instead of a triple, an element of
 TRACKLIST can be a single number (as long as there is only one medium). In this
 case, it denotes that track on the first and only medium."
   (let ((track-lists
-         (mapcar (lambda (medium) (pl-as-list (track-list medium)))
+         (mapcar (lambda (medium)
+                   (cons (pos medium) (pl-as-list (track-list medium))))
                  (pl-as-list (medium-list release)))))
     (mapcan
      (lambda (triple)
@@ -21,10 +22,9 @@ case, it denotes that track on the first and only medium."
          (when (< b a)
            (error "Invalid range of tracks: [~A, ~A]." a b))
 
-         (let ((tracks (nth (1- c) track-lists)))
+         (let ((tracks (cdr (assoc c track-lists))))
            (unless tracks
-             (error "No such medium: ~A (there are only ~A)"
-                    c (length track-lists)))
+             (error "No such medium: ~A" c))
            (unless (<= 1 a b (length tracks))
              (error "Can't find tracks ~A to ~A on medium ~A (has ~A tracks)"
                     a b c (length tracks)))
