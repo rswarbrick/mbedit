@@ -1,51 +1,9 @@
 (in-package :mbedit)
 
-(defclass rowed-relation (relation)
-  ((row-id :reader row-id :initarg :row-id)))
-
-;; Yes, this is horribly hacky, but I'm not sure what to do better. :-(
-(defun make-rowed-relation (relation id)
-  (let* ((ob (make-instance 'rowed-relation :row-id id))
-         (slot-names
-          '("TYPE" "DIRECTION" "ATTRIBUTES" "BEGIN"
-            "END" "TARGET-ID" "TARGET"))
-         (slots (mapcar (lambda (name) (intern name :mbcl)) slot-names)))
-    (dolist (slot slots)
-      (when (slot-boundp relation slot)
-        (setf (slot-value ob slot) (slot-value relation slot))))
-    ob))
-
 (defun recording-dateable-relations (recording)
-  (append (relations-of-type recording :class 'work)
-          (relations-of-type recording :class 'artist)))
-
-(defun recording-rowed-relations (recording)
-  (extract-relation-rows (recording-dateable-relations recording)
-                         (drakma:http-request (page recording)
-                                              :cookie-jar *cookie-jar*)))
-
-(defun extract-relation-rows (relations html)
-  (let ((acc)
-        (relationships-header-pos (search "<h2>Relationships</h2>" html)))
-    ;; You have to jump past here first, otherwise you pick up release artist
-    ;; credits and everything goes pear shaped...
-    (unless relationships-header-pos
-      (error "Couldn't find relationships header."))
-    (dolist (rel relations)
-      (let ((pos (search (id (target rel)) html :start2 relationships-header-pos)))
-        (unless pos
-          (error "Can't find a reference to ~A in html page." (target rel)))
-        (setf pos (search "http://musicbrainz.org/edit/relationship/delete"
-                          html :start2 pos))
-        (unless pos
-          (error "Can't find an edit link in html page. Am I still logged in?"))
-        (multiple-value-bind (hit matches)
-            (ppcre:scan-to-strings "=([0-9]+)\">Remove" html :start pos)
-          (unless hit
-            (error "Failed to find an ID after the edit link."))
-          (push (make-rowed-relation rel (parse-integer (aref matches 0)))
-                acc))))
-    acc))
+  (mapcar (lambda (reln) (get-rowed-relation recording reln))
+          (append (relations-of-type recording :class 'work)
+                  (relations-of-type recording :class 'artist))))
 
 (defun recording-periods (recording)
   "Return a list of the periods associated to the making of this recording."
@@ -69,7 +27,7 @@
 conflicting dates."
   (unless (and (typep begin 'date) (typep end 'date))
     (error "BEGIN and END must be MBCL:DATEs."))
-  (let ((relations (recording-rowed-relations recording)))
+  (let ((relations (recording-dateable-relations recording)))
     (unless (or force
                 (periods-agree-p (cons (list begin end)
                                        (recording-periods recording))))
@@ -79,42 +37,13 @@ conflicting dates."
       (unless (and (begin rel) (date= (parse-date-string (begin rel)) begin))
         (actually-date-relation recording rel begin end auto-edit edit-note)))))
 
-(defun date-relation-parameters (recording relation begin end
-                                 auto-edit edit-note)
-  (multiple-value-bind (source target)
-      (get-relation-entities recording relation)
-    (let ((class0 (class-name (class-of source)))
-          (class1 (class-name (class-of target))))
-      `(("ar.entity0.id" . ,(princ-to-string (get-db-row source)))
-        ("ar.entity0.name" . ,(moniker source))
-        ("ar.entity1.id" . ,(princ-to-string (get-db-row target)))
-        ("ar.entity1.name" . ,(moniker target))
-        ,@(ar-period-parameters begin end)
-        ("ar.link_type_id" . ,(princ-to-string
-                               (get-relationship-type-id
-                                (relation-type relation) class0 class1)))
-        ("ar.edit_note" . ,(or edit-note ""))
-        ("ar.as_auto_editor" . ,(if auto-edit "1" "0"))
-        ;; These were passed as GET, but hopefully I can be cheeky...
-        ("id" . ,(princ-to-string (row-id relation)))
-        ("type0" . ,(string-downcase class0))
-        ("type1" . ,(string-downcase class1))
-        ,@(get-relationship-attributes recording relation)))))
-
 (defun actually-date-relation (recording relation begin end
                                auto-edit edit-note)
   "Actually set the relationship's date."
   (handler-case
-      (progn
-        (expect-302
-          (drakma:http-request
-           (format nil "~Aedit/relationship/edit" *mb-root-url*)
-           :method :post
-           :parameters (date-relation-parameters recording relation
-                                                 begin end auto-edit edit-note)
-           :cookie-jar *cookie-jar*))
-        (forget-cached recording)
-        (forget-cached (target relation)))
+      (edit-relation recording relation
+                     :begin begin :end end
+                     :auto-edit auto-edit :edit-note edit-note)
     (not-dateable (c)
       (declare (ignore c))
       (values)))
@@ -149,6 +78,11 @@ to the other dateable ARs."
                          :auto-edit auto-edit :edit-note edit-note)
          (format t "done.~%")))
       (force-output))))
+
+(defun copy-release-recording-dates (release &key auto-edit edit-note)
+  "Calls COPY-SOME-RECORDING-DATES on the recordings on the given release."
+  (copy-some-recording-dates (pl-as-list (recordings release))
+                             :auto-edit auto-edit :edit-note edit-note))
 
 ;; Example usage:
 ;;

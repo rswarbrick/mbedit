@@ -19,4 +19,8 @@
      (:file "util" :depends-on ("package"))
      (:file "relation-types" :depends-on ("package" "login" "util"))
      (:file "date-recordings"
-            :depends-on ("package" "relation-types" "json" "util"))))
+            :depends-on ("package" "edit-relation" "util"))
+     (:file "edit-relation"
+            :depends-on ("package" "relation-types" "json"))
+     (:file "un-orchestrate"
+            :depends-on ("package" "edit-relation" "util"))))
