@@ -29,7 +29,7 @@
     (("conductor" artist recording)
      "    {additional:additionally} conducted")
     (("performance" recording work)
-     "    is a {partial} {live} {instrumental} {cover} performance of")
+     "    is a {partial} {live} {instrumental} {cover} recording of")
     (("producer" artist recording)
      ,(concatenate 'string
                    "    {additional:additionally} {assistant} {associate}"
